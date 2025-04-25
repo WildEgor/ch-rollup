@@ -51,14 +51,14 @@ func New(cluster database.Cluster) *RollUp {
 
 // RunOptions ...
 type RunOptions struct {
-	Database     string
-	Table        string
-	TempTable    string
-	PartitionKey time.Duration
-	Columns      []types.ColumnSetting
-	Interval     time.Duration
-	After        time.Duration
-	CopyInterval time.Duration
+	Database     string                `json:"database"`
+	Table        string                `json:"table"`
+	TempTable    string                `json:"temp_table"`
+	PartitionKey time.Duration         `json:"partition_key"`
+	Columns      []types.ColumnSetting `json:"columns"`
+	Interval     time.Duration         `json:"interval"`
+	After        time.Duration         `json:"after"`
+	CopyInterval time.Duration         `json:"copy_interval"`
 }
 
 const (

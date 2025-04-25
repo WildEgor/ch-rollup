@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ozontech/ch-rollup/pkg/dump"
 	"time"
 
 	"github.com/ozontech/ch-rollup/pkg/rollup"
@@ -23,10 +24,13 @@ type RollUp interface {
 
 const (
 	defaultSchedulerInterval = time.Hour
+	defaultDumpCheckSec      = 30
 )
 
 // Scheduler of ch-rollup.
 type Scheduler struct {
+	opts     *Opts
+	dumper   dump.Dumper
 	tasks    []types.Task
 	dbRollUp RollUp
 }
@@ -36,7 +40,7 @@ var (
 )
 
 // New returns new Scheduler.
-func New(tasks types.Tasks, rollUp RollUp) (*Scheduler, error) {
+func New(tasks types.Tasks, rollUp RollUp, options ...Opt) (*Scheduler, error) {
 	if err := tasks.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate tasks: %w", err)
 	}
@@ -45,10 +49,23 @@ func New(tasks types.Tasks, rollUp RollUp) (*Scheduler, error) {
 		return nil, errNewNilRollup
 	}
 
-	return &Scheduler{
+	s := &Scheduler{
 		tasks:    tasks,
 		dbRollUp: rollUp,
-	}, nil
+	}
+
+	for _, opt := range options {
+		opt(s.opts)
+	}
+
+	switch s.opts.dumpKind {
+	case "in_memory":
+		s.dumper = dump.NewInMemoryDumper()
+	default:
+		// TODO
+	}
+
+	return s, nil
 }
 
 var (
@@ -62,6 +79,8 @@ func (s *Scheduler) Run(ctx context.Context) (<-chan Event, error) {
 	}
 
 	eventChan := make(chan Event)
+
+	s.tryRollUp(ctx)
 
 	go func() {
 		defer close(eventChan)

@@ -28,26 +28,27 @@ func (t Tasks) Validate() error {
 
 // Task ...
 type Task struct {
-	Database       string          // The name of the database where the table resides.
-	Table          string          // The name of the table to be configured.
-	PartitionKey   time.Duration   // The key used for partitioning data, typically representing a time interval.
-	CopyInterval   time.Duration   // This is the interval that will be used when copying data. Default: '1h'.
-	RollUpSettings []RollUpSetting // A slice of settings defining roll up intervals and specific column configurations for those intervals.
-	ColumnSettings []ColumnSetting // A slice of column configuration objects that define how data is grouped and aggregated.
+	ID             string          `json:"id"`
+	Database       string          `json:"database"`         // The name of the database where the table resides.
+	Table          string          `json:"table"`            // The name of the table to be configured.
+	PartitionKey   time.Duration   `json:"partition_key"`    // The key used for partitioning data, typically representing a time interval.
+	CopyInterval   time.Duration   `json:"copy_interval"`    // This is the interval that will be used when copying data. Default: '1h'.
+	RollUpSettings []RollUpSetting `json:"roll_up_settings"` // A slice of settings defining roll up intervals and specific column configurations for those intervals.
+	ColumnSettings []ColumnSetting `json:"column_settings"`  // A slice of column configuration objects that define how data is grouped and aggregated.
 }
 
 // RollUpSetting defines a specific roll up interval and the columns affected during that interval.
 type RollUpSetting struct {
-	After          time.Duration   // The time duration after which the roll up interval applies.
-	Interval       time.Duration   // The roll up interval duration.
-	ColumnSettings []ColumnSetting // A slice of column configuration objects that override the top-level column settings for the specified interval.
+	After          time.Duration   `json:"after"`           // The time duration after which the roll up interval applies.
+	Interval       time.Duration   `json:"interval"`        // The roll up interval duration.
+	ColumnSettings []ColumnSetting `json:"column_settings"` // A slice of column configuration objects that override the top-level column settings for the specified interval.
 }
 
 // ColumnSetting defines settings for a specific column.
 type ColumnSetting struct {
-	Name         string // The name of the column.
-	IsRollUpTime bool   // (Optional) A boolean indicating if this column is used as the time reference for roll up.
-	Expression   string // (Optional) The expression used to calculate value for the column. Example: 'countMergeState(counter)'
+	Name         string `json:"name"`                      // The name of the column.
+	IsRollUpTime bool   `json:"is_roll_up_time,omitempty"` // (Optional) A boolean indicating if this column is used as the time reference for roll up.
+	Expression   string `json:"expression,omitempty"`      // (Optional) The expression used to calculate value for the column. Example: 'countMergeState(counter)'
 }
 
 var (

@@ -5,6 +5,7 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 
 	"golang.org/x/exp/maps"
 
@@ -13,13 +14,14 @@ import (
 )
 
 const (
-	tempTablePrefix = "_temp"
+	tempTablePrefix  = "_temp"
+	tryRollUpEachSec = 30
 )
 
 func (s *Scheduler) rollUp(ctx context.Context) error {
 	for _, task := range s.tasks {
 		for _, rollUpSetting := range task.RollUpSettings {
-			err := s.dbRollUp.Run(ctx, rollup.RunOptions{
+			ro := rollup.RunOptions{
 				Database:     task.Database,
 				Table:        task.Table,
 				TempTable:    task.Table + tempTablePrefix,
@@ -28,14 +30,40 @@ func (s *Scheduler) rollUp(ctx context.Context) error {
 				Interval:     rollUpSetting.Interval,
 				After:        rollUpSetting.After,
 				CopyInterval: task.CopyInterval,
-			})
+			}
+			err := s.dbRollUp.Run(ctx, ro)
 			if err != nil {
+				if s.dumper != nil {
+					if b, mErr := json.Marshal(&ro); mErr != nil {
+						return s.dumper.Dump(task.ID, string(b))
+					}
+				}
+
 				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+func (s *Scheduler) tryRollUp(ctx context.Context) {
+	if s.dumper != nil {
+		s.dumper.Listen(func(id string, content string) error {
+			var ro rollup.RunOptions
+			if err := json.Unmarshal([]byte(content), &ro); err != nil {
+				// TODO
+				return nil
+			}
+			err := s.dbRollUp.Run(ctx, ro)
+			if err != nil {
+				// TODO
+				return nil
+			}
+
+			return nil
+		}, tryRollUpEachSec)
+	}
 }
 
 func prepareRollUpColumns(globalColumnSettings, currentColumnSettings []types.ColumnSetting) []types.ColumnSetting {

@@ -23,6 +23,7 @@ func main() {
 
 	tasks := []types.Task{
 		{
+			ID:           "test",
 			Database:     "default",
 			Table:        "test_table_agg",
 			PartitionKey: time.Hour * 24,
