@@ -24,7 +24,6 @@ type RollUp interface {
 
 const (
 	defaultSchedulerInterval = time.Hour
-	defaultDumpCheckSec      = 30
 )
 
 // Scheduler of ch-rollup.
@@ -36,7 +35,8 @@ type Scheduler struct {
 }
 
 var (
-	errNewNilRollup = errors.New("rollUp must be not nil")
+	errNewNilRollup            = errors.New("rollUp must be not nil")
+	errSchedulerNotInitialized = errors.New("scheduler not initialized")
 )
 
 // New returns new Scheduler.
@@ -50,6 +50,9 @@ func New(tasks types.Tasks, rollUp RollUp, options ...Opt) (*Scheduler, error) {
 	}
 
 	s := &Scheduler{
+		opts: &Opts{
+			retrySec: 30,
+		},
 		tasks:    tasks,
 		dbRollUp: rollUp,
 	}
@@ -61,16 +64,10 @@ func New(tasks types.Tasks, rollUp RollUp, options ...Opt) (*Scheduler, error) {
 	switch s.opts.dumpKind {
 	case "in_memory":
 		s.dumper = dump.NewInMemoryDumper()
-	default:
-		// TODO
 	}
 
 	return s, nil
 }
-
-var (
-	errSchedulerNotInitialized = errors.New("scheduler not initialized")
-)
 
 // Run Scheduler.
 func (s *Scheduler) Run(ctx context.Context) (<-chan Event, error) {

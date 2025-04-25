@@ -1,65 +1,72 @@
 package dump
 
 import (
+	"context"
 	"errors"
-	"log"
+	"fmt"
 	"sync"
 	"time"
 )
 
+// InMemoryDumper ...
 type InMemoryDumper struct {
-	storage map[string]string // keep json-string
+	storage map[string]string
 	mu      sync.RWMutex
 }
 
+// NewInMemoryDumper ...
 func NewInMemoryDumper() Dumper {
 	return &InMemoryDumper{
 		storage: make(map[string]string),
 	}
 }
 
+// Dump ...
 func (imd *InMemoryDumper) Dump(id string, content string) error {
 	imd.mu.Lock()
 	defer imd.mu.Unlock()
-	key := imd.makeKey(id)
-	imd.storage[key] = content
+	imd.storage[id] = content
 	return nil
 }
 
+// ProcessNext ...
 func (imd *InMemoryDumper) ProcessNext(sender Sender) error {
 	imd.mu.RLock()
-	defer imd.mu.Unlock()
+	defer imd.mu.RUnlock()
 
-	for key, content := range imd.storage {
-		err := sender(key, content)
+	for id, content := range imd.storage {
+		err := sender(id, content)
 		if err != nil {
 			return err
 		}
 
-		delete(imd.storage, key)
+		delete(imd.storage, id)
 	}
 
 	return nil
 }
 
-func (imd *InMemoryDumper) Listen(sender Sender, interval int) {
-	ticker := time.NewTicker(time.Second * time.Duration(interval))
-
+// Listen ...
+func (imd *InMemoryDumper) Listen(ctx context.Context, sender Sender, interval int) {
 	go func() {
-		for range ticker.C {
-			for {
-				err := imd.ProcessNext(sender)
-				if err != nil {
-					if !errors.Is(err, ErrNoDumps) {
-						log.Printf("ERROR: %+v\n", err)
+		ticker := time.NewTicker(time.Second * time.Duration(interval))
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				for {
+					err := imd.ProcessNext(sender)
+					if err != nil {
+						if !errors.Is(err, ErrNoDumps) {
+							fmt.Printf("ERROR: %+v\n", err)
+						}
+						break
 					}
-					break
 				}
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
-}
-
-func (imd *InMemoryDumper) makeKey(id string) string {
-	return id
 }

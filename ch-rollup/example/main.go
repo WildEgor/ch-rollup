@@ -30,7 +30,7 @@ func main() {
 			RollUpSettings: []types.RollUpSetting{
 				{
 					After:    time.Hour * 24,
-					Interval: time.Hour,
+					Interval: time.Second,
 					ColumnSettings: []types.ColumnSetting{
 						{
 							Name:       "rollup_interval",
@@ -64,7 +64,12 @@ func main() {
 		panic(err)
 	}
 
-	s, err := scheduler.New(tasks, rollup.New(cluster))
+	s, err := scheduler.New(
+		tasks,
+		rollup.New(cluster),
+		scheduler.WithDump("in_memory"),
+		scheduler.WithRetrySec(10),
+	)
 	if err != nil {
 		panic(err)
 	}
