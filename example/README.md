@@ -15,13 +15,15 @@ docker exec -it ch-rollup-clickhouse clickhouse-client
 
 Then create table:
 ```sql
-CREATE TABLE test_table_agg(
+CREATE TABLE test_table_agg (
   col1 UInt64,
   counter AggregateFunction(count, UInt64),
-  rollup_interval UInt64, 
+  rollup_interval UInt64,
   event_time DateTime
 )
-  ENGINE=AggregatingMergeTree ORDER BY (col1, counter, event_time) PARTITION BY toYYYYMMDD(event_time);
+ENGINE = AggregatingMergeTree()
+ORDER BY (col1, rollup_interval, event_time)
+PARTITION BY toYYYYMMDD(event_time);
 ```
 
 3. Copy ```main.go``` content
